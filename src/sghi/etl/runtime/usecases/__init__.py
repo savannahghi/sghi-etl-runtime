@@ -50,26 +50,24 @@ class _WorkflowExecutor(Task[None, None]):
 
     def execute(self, an_input: None = None) -> None:
         workflow: WorkflowDefinition = self._workflow_factory()
+        ensure_predicate(
+            test=isinstance(workflow, WorkflowDefinition),
+            message=(
+                f"The factory '{type_fqn(self._workflow_factory)}', did not "
+                "return an 'sghi.etl.core.WorkflowDefinition' instance."
+            ),
+            exc_factory=TypeError,
+        )
+
         logger: Logger = logging.getLogger(
             f"{_WORKFLOW_EXC_LOGGER_PREFIX}[{workflow.id} - {workflow.name}] "
         )
-
-        logger.info("Executing workflow.")
         try:
-            workflow: WorkflowDefinition = self._workflow_factory()
-            ensure_predicate(
-                test=isinstance(workflow, WorkflowDefinition),
-                message=(
-                    f"The factory '{type_fqn(self._workflow_factory)}', did "
-                    "not return an 'sghi.etl.core.WorkflowDefinition' "
-                    "instance."
-                ),
-                exc_factory=TypeError,
-            )
-
+            logger.info("executing workflow...")
             self._do_run_workflow(workflow)
+            logger.info("workflow executed successfully.")
         except Exception:
-            logger.exception("Error executing workflow.")
+            logger.exception("error executing workflow.")
             raise
 
     @staticmethod
@@ -79,7 +77,7 @@ class _WorkflowExecutor(Task[None, None]):
             workflow.processor_factory() as processor,
             workflow.sink_factory() as sink,
         ):
-            sink.drain(processor.process(source.draw()))
+            sink.drain(processor.apply(source.draw()))
 
 
 # =============================================================================
